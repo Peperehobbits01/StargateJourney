@@ -3,6 +3,8 @@ package net.povstalec.sgjourney.common.block_entities.stargate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,6 +18,8 @@ import net.povstalec.sgjourney.common.sgjourney.PointOfOrigin;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo.ChevronLockSpeed;
 import net.povstalec.sgjourney.common.sgjourney.Symbols;
+import net.povstalec.sgjourney.common.sgjourney.stargate.ClassicStargate;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
 
@@ -39,8 +43,6 @@ public class ClassicStargateEntity extends RotatingStargateEntity
 	{
 		super(BlockEntityInit.CLASSIC_STARGATE.get(), StargateJourney.sgjourneyLocation("classic/classic"), pos, state,
 				TOTAL_SYMBOLS, StargateInfo.Gen.NONE, 0, VERTICAL_CENTER_STANDARD_HEIGHT, HORIZONTAL_CENTER_CLASSIC_HEIGHT, MAX_ROTATION);
-		
-		displayID();
 	}
 
 	@Override
@@ -66,15 +68,39 @@ public class ClassicStargateEntity extends RotatingStargateEntity
     	super.deserializeStargateInfo(tag, registries, isUpgraded);
 	}
 	
+	@Override
+	public @NotNull CompoundTag getUpdateTag(HolderLookup.Provider registries)
+	{
+		CompoundTag tag = super.getUpdateTag(registries);
+		
+		tag.putString(POINT_OF_ORIGIN, symbolInfo().pointOfOrigin().toString());
+		tag.putString(SYMBOLS, symbolInfo().symbols().toString());
+		
+		return tag;
+	}
+	
+	@Override
+	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries)
+	{
+		super.onDataPacket(net, packet, registries);
+		CompoundTag tag = packet.getTag();
+		
+		if (tag.contains(POINT_OF_ORIGIN))
+			symbolInfo().setPointOfOrigin(ResourceLocation.tryParse(tag.getString(POINT_OF_ORIGIN)));
+		
+		if(tag.contains(SYMBOLS))
+			symbolInfo().setSymbols(ResourceLocation.tryParse(tag.getString(SYMBOLS)));
+	}
+	
 	public static void tick(Level level, BlockPos pos, BlockState state, ClassicStargateEntity stargate)
 	{
 		RotatingStargateEntity.tick(level, pos, state, stargate);
 	}
 
 	@Override
-	public ChevronLockSpeed getChevronLockSpeed()
+	public ChevronLockSpeed getChevronLockSpeed(boolean doKawoosh)
 	{
-		return CommonStargateConfig.classic_chevron_lock_speed.get();
+		return doKawoosh ? ClassicStargate.CHEVRON_LOCK_SPEED : ChevronLockSpeed.FAST;
 	}
 
 	@Override

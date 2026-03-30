@@ -21,7 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.povstalec.sgjourney.common.block_entities.CartoucheEntity;
 import net.povstalec.sgjourney.common.block_entities.StructureGenEntity;
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractTransporterEntity;
+import net.povstalec.sgjourney.common.block_entities.transporter.AbstractTransporterEntity;
 import net.povstalec.sgjourney.common.blockstates.Orientation;
 
 public class CartoucheBlockItem extends BlockItem
@@ -110,12 +110,11 @@ public class CartoucheBlockItem extends BlockItem
 			
 			if(generationStep == StructureGenEntity.Step.GENERATED)
 			{
-				if(info.contains(CartoucheEntity.DIMENSION, CompoundTag.TAG_STRING) && !info.contains(CartoucheEntity.ADDRESS))
+				if(info.contains(CartoucheEntity.DIMENSION, CompoundTag.TAG_STRING))
 					cartouche.setDimension(ResourceLocation.tryParse(info.getString(CartoucheEntity.DIMENSION)));
-				else
+				else if(!info.contains(CartoucheEntity.ADDRESS))
 					cartouche.setDimensionFromLevel(level);
-				
-				cartouche.setAddressFromDimension();
+				cartouche.tryGenerateAddress();
 				
 				if(info.contains(CartoucheEntity.SYMBOLS, CompoundTag.TAG_STRING))
 					cartouche.setSymbols(ResourceLocation.tryParse(info.getString(CartoucheEntity.SYMBOLS)));

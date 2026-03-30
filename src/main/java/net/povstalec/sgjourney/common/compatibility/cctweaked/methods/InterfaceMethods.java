@@ -8,7 +8,8 @@ import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.MethodResult;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractInterfaceEntity;
+import net.povstalec.sgjourney.StargateJourney;
+import net.povstalec.sgjourney.common.block_entities.tech_interface.AbstractInterfaceEntity;
 import net.povstalec.sgjourney.common.compatibility.computer_functions.InterfaceFunctions;
 
 public class InterfaceMethods
@@ -21,12 +22,12 @@ public class InterfaceMethods
 		{
 			return "setEnergyTarget";
 		}
-
+		
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, BlockEntity stargate, IArguments arguments) throws LuaException
 		{
-			arguments.escapes();
-			InterfaceFunctions.setEnergyTarget(interfaceEntity, arguments.getLong(0));
+			long target = arguments.getLong(0);
+			InterfaceFunctions.setEnergyTarget(interfaceEntity, target);
 			
 			return MethodResult.of();
 		}
@@ -39,7 +40,7 @@ public class InterfaceMethods
 		{
 			return "addressToString";
 		}
-
+		
 		@SuppressWarnings("unchecked")
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, BlockEntity stargate, IArguments arguments) throws LuaException
@@ -66,9 +67,9 @@ public class InterfaceMethods
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
+			Map<Double, Double> addressTable = (Map<Double, Double>) arguments.getTable(0);
 			MethodResult result = context.executeMainThreadTask(() ->
 			{
-				Map<Double, Double> addressTable = (Map<Double, Double>) arguments.getTable(0);
 				Address address = new Address(addressTable);
 				
 				String dimension = stargate.getLevel().dimension().location().toString();

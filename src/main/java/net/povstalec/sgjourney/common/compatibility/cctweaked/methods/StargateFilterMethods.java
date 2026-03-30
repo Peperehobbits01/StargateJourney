@@ -10,7 +10,7 @@ import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.MethodResult;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 import net.povstalec.sgjourney.common.block_entities.stargate.AbstractStargateEntity;
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractInterfaceEntity;
+import net.povstalec.sgjourney.common.block_entities.tech_interface.AbstractInterfaceEntity;
 import net.povstalec.sgjourney.common.compatibility.computer_functions.StargateFilterFunctions;
 import net.povstalec.sgjourney.common.misc.ArrayHelper;
 import net.povstalec.sgjourney.common.sgjourney.Address;
@@ -50,7 +50,7 @@ public class StargateFilterMethods
 		{
 			return "getFilterType";
 		}
-
+		
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
@@ -65,11 +65,12 @@ public class StargateFilterMethods
 		{
 			return "setFilterType";
 		}
-
+		
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
-			return MethodResult.of(StargateFilterFunctions.setFilterType(stargate, arguments.getInt(0)));
+			int filterType = arguments.getInt(0);
+			return MethodResult.of(StargateFilterFunctions.setFilterType(stargate, filterType));
 		}
 	}
 	
@@ -82,33 +83,24 @@ public class StargateFilterMethods
 		{
 			return "addToWhitelist";
 		}
-
+		
 		@SuppressWarnings("unchecked")
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
-			arguments.escapes();
-			MethodResult result = context.executeMainThreadTask(() ->
-			{
-				Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
-				boolean isVisible;
-				
-				try
-				{
-					isVisible = arguments.getBoolean(1);
-				}
-				catch(LuaException e)
-				{
-					isVisible = false;
-				}
-				
-				int[] addressArray = ArrayHelper.tableToArray(addressMap);
-				checkAddressArray(addressArray);
-				
-				return new Object[] {StargateFilterFunctions.addToWhitelist(stargate, addressArray, isVisible)};
-			});
+			Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
+			int[] addressArray = ArrayHelper.tableToArray(addressMap);
+			checkAddressArray(addressArray);
 			
-			return result;
+			try
+			{
+				boolean isVisible = arguments.getBoolean(1);
+				return context.executeMainThreadTask(() -> new Object[] {StargateFilterFunctions.addToWhitelist(stargate, addressArray, isVisible)});
+			}
+			catch(LuaException e)
+			{
+				return context.executeMainThreadTask(() -> new Object[] {StargateFilterFunctions.addToWhitelist(stargate, addressArray, false)});
+			}
 		}
 	}
 	
@@ -119,23 +111,16 @@ public class StargateFilterMethods
 		{
 			return "removeFromWhitelist";
 		}
-
+		
 		@SuppressWarnings("unchecked")
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
-			arguments.escapes();
-			MethodResult result = context.executeMainThreadTask(() ->
-			{
-				Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
-				
-				int[] addressArray = ArrayHelper.tableToArray(addressMap);
-				checkAddressArray(addressArray);
-				
-				return new Object[] {StargateFilterFunctions.removeFromWhitelist(stargate, addressArray)};
-			});
+			Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
+			int[] addressArray = ArrayHelper.tableToArray(addressMap);
+			checkAddressArray(addressArray);
 			
-			return result;
+			return context.executeMainThreadTask(() -> new Object[] {StargateFilterFunctions.removeFromWhitelist(stargate, addressArray)});
 		}
 	}
 	
@@ -178,33 +163,24 @@ public class StargateFilterMethods
 		{
 			return "addToBlacklist";
 		}
-
+		
 		@SuppressWarnings("unchecked")
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
-			arguments.escapes();
-			MethodResult result = context.executeMainThreadTask(() ->
-			{
-				Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
-				boolean isVisible;
-				
-				try
-				{
-					isVisible = arguments.getBoolean(1);
-				}
-				catch(LuaException e)
-				{
-					isVisible = false;
-				}
-				
-				int[] addressArray = ArrayHelper.tableToArray(addressMap);
-				checkAddressArray(addressArray);
-				
-				return new Object[] {StargateFilterFunctions.addToBlacklist(stargate, addressArray, isVisible)};
-			});
+			Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
+			int[] addressArray = ArrayHelper.tableToArray(addressMap);
+			checkAddressArray(addressArray);
 			
-			return result;
+			try
+			{
+				boolean isVisible = arguments.getBoolean(1);
+				return context.executeMainThreadTask(() -> new Object[] {StargateFilterFunctions.addToBlacklist(stargate, addressArray, isVisible)});
+			}
+			catch(LuaException e)
+			{
+				return context.executeMainThreadTask(() -> new Object[] {StargateFilterFunctions.addToBlacklist(stargate, addressArray, false)});
+			}
 		}
 	}
 	
@@ -215,23 +191,16 @@ public class StargateFilterMethods
 		{
 			return "removeFromBlacklist";
 		}
-
+		
 		@SuppressWarnings("unchecked")
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{
-			arguments.escapes();
-			MethodResult result = context.executeMainThreadTask(() ->
-			{
-				Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
-				
-				int[] addressArray = ArrayHelper.tableToArray(addressMap);
-				checkAddressArray(addressArray);
-				
-				return new Object[] {StargateFilterFunctions.removeFromBlacklist(stargate, addressArray)};
-			});
+			Map<Double, Double> addressMap = (Map<Double, Double>) arguments.getTable(0);
+			int[] addressArray = ArrayHelper.tableToArray(addressMap);
+			checkAddressArray(addressArray);
 			
-			return result;
+			return context.executeMainThreadTask(() -> new Object[] {StargateFilterFunctions.removeFromBlacklist(stargate, addressArray)});
 		}
 	}
 	
@@ -257,7 +226,7 @@ public class StargateFilterMethods
 		{
 			return "clearBlacklist";
 		}
-
+		
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, AbstractStargateEntity stargate, IArguments arguments) throws LuaException
 		{

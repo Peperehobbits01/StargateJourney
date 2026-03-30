@@ -3,10 +3,13 @@ package net.povstalec.sgjourney.common.block_entities.stargate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.povstalec.sgjourney.common.sgjourney.PointOfOrigin;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo;
 import net.povstalec.sgjourney.common.sgjourney.Symbols;
 import net.povstalec.sgjourney.common.sgjourney.info.DHDInfo;
+import net.povstalec.sgjourney.common.sgjourney.stargate.UniverseStargate;
 import org.jetbrains.annotations.NotNull;
 
 import net.minecraft.core.BlockPos;
@@ -19,7 +22,6 @@ import net.povstalec.sgjourney.common.compatibility.cctweaked.StargatePeripheral
 import net.povstalec.sgjourney.common.config.CommonStargateConfig;
 import net.povstalec.sgjourney.common.init.BlockEntityInit;
 import net.povstalec.sgjourney.common.packets.ClientBoundSoundPackets;
-import net.povstalec.sgjourney.common.packets.ClientboundUniverseStargateUpdatePacket;
 import net.povstalec.sgjourney.common.sgjourney.Address;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo.ChevronLockSpeed;
 
@@ -40,7 +42,7 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 	
 	public int waitTicks = 1;
 	
-	public Address addressBuffer = new Address(true);
+	public Address.Mutable addressBuffer = new Address.Mutable();
 	public int symbolBuffer = 0;
 	
 	protected int angle;
@@ -63,7 +65,7 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 			{
 				if(hasDHD())
 					this.dhd.updateDHD(!stargate.isConnected() || (stargate.isConnected() && stargate.isDialingOut()) ?
-							addressBuffer : new Address(), addressBuffer.hasPointOfOrigin() || stargate.isConnected());
+							addressBuffer : new Address.Mutable(), addressBuffer.hasPointOfOrigin() || stargate.isConnected());
 			}
 		};
 		
@@ -74,9 +76,9 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 	@Override
 	public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries)
 	{
-        super.loadAdditional(tag, registries);
-        
-        addressBuffer.fromArray(tag.getIntArray(ADDRESS_BUFFER));
+		super.loadAdditional(tag, registries);
+		
+		addressBuffer.fromArray(tag.getIntArray(ADDRESS_BUFFER));
         symbolBuffer = tag.getInt(SYMBOL_BUFFER);
     }
 	
@@ -85,9 +87,34 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 	{
 		super.saveAdditional(tag, registries);
 		
-		tag.putIntArray(ADDRESS_BUFFER, addressBuffer.toArray());
+		tag.putIntArray(ADDRESS_BUFFER, addressBuffer.getArray());
 		tag.putInt(SYMBOL_BUFFER, symbolBuffer);
 	}
+	
+	@Override
+	public @NotNull CompoundTag getUpdateTag(HolderLookup.Provider registries)
+	{
+		CompoundTag tag = super.getUpdateTag(registries);
+		
+		tag.putInt(SYMBOL_BUFFER, symbolBuffer);
+		tag.putIntArray(ADDRESS_BUFFER, addressBuffer.getArray());
+		
+		return tag;
+	}
+	
+	@Override
+	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries)
+	{
+		super.onDataPacket(net, packet, registries);
+		CompoundTag tag = packet.getTag();
+		
+		symbolBuffer = tag.getInt(ADDRESS_BUFFER);
+		addressBuffer.fromArray(tag.getIntArray(ADDRESS_BUFFER));
+	}
+	
+	//============================================================================================
+	//*******************************************Other********************************************
+	//============================================================================================
 	
 	@Override
 	public StargateInfo.Feedback dhdEngageSymbol(int symbol)
@@ -166,8 +193,8 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 		if(!isConnected() && addressBuffer.getLength() > symbolBuffer)
 		{
 			if(!isRotating())
-				startRotation(addressBuffer.getSymbol(symbolBuffer), CommonStargateConfig.universe_best_direction.get() ?
-						bestSymbolDirection(addressBuffer.getSymbol(symbolBuffer)) : alternatingDirection(address.getLength()));
+				startRotation(addressBuffer.symbolAt(symbolBuffer), CommonStargateConfig.universe_best_direction.get() ?
+						bestSymbolDirection(addressBuffer.symbolAt(symbolBuffer)) : alternatingDirection(address.getLength()));
 			
 			if(rotation == desiredRotation)
 				engageSymbol(getCurrentSymbol());
@@ -221,7 +248,7 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 	@Override
 	protected int rotationStep()
 	{
-		return FAST_ROTATION ? (this.rotating ? 3 : 2) : 2;
+		return FAST_ROTATION ? (this.rotating ? 3 : 2) : 2; // Only rotates fast during computer dialing or DHD dialing, not during redstone dialing
 	}
 	
 	@Override
@@ -243,21 +270,11 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 		addressBuffer.reset();
 		super.resetAddress(updateInterfaces);
 	}
-	
-	@Override
-	public boolean updateClient()
-	{
-		if(!super.updateClient())
-			return false;
-		
-		PacketDistributor.sendToPlayersTrackingChunk((ServerLevel) level, level.getChunkAt(this.worldPosition).getPos(), new ClientboundUniverseStargateUpdatePacket(this.worldPosition, this.symbolBuffer, this.addressBuffer.toArray()));
-		return true;
-	}
 
 	@Override
-	public ChevronLockSpeed getChevronLockSpeed()
+	public ChevronLockSpeed getChevronLockSpeed(boolean doKawoosh)
 	{
-		return CommonStargateConfig.universe_chevron_lock_speed.get();
+		return doKawoosh ? UniverseStargate.CHEVRON_LOCK_SPEED : ChevronLockSpeed.FAST;
 	}
 
 	@Override
@@ -267,18 +284,21 @@ public class UniverseStargateEntity extends RotatingStargateEntity
 	}
 	
 	@Override
-	public void doWhileDialed(int openTime, StargateInfo.ChevronLockSpeed chevronLockSpeed)
+	public void doWhileDialed(Address connectedAddress, int kawooshStartTicks, boolean doKawoosh, int connectionTime)
 	{
+		super.doWhileDialed(connectedAddress, kawooshStartTicks, doKawoosh, connectionTime);
+		
 		if(this.level.isClientSide())
 			return;
 		
-		if(openTime == 1)
+		if(connectionTime == 1)
 		{
 			startSound();
 			startRotation(-1, true);
 		}
 		
-		if(openTime == chevronLockSpeed.getChevronWaitTicks() * 8)
+		StargateInfo.ChevronLockSpeed chevronLockSpeed = getChevronLockSpeed(doKawoosh);
+		if(connectionTime == chevronLockSpeed.getChevronWaitTicks() * 8)
 			endRotation(false);
 	}
 }

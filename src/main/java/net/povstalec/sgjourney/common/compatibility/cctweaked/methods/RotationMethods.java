@@ -6,7 +6,7 @@ import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.MethodResult;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 import net.povstalec.sgjourney.common.block_entities.stargate.RotatingStargateEntity;
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractInterfaceEntity;
+import net.povstalec.sgjourney.common.block_entities.tech_interface.AbstractInterfaceEntity;
 import net.povstalec.sgjourney.common.compatibility.computer_functions.RotatingStargateFunctions;
 
 public class RotationMethods
@@ -37,7 +37,8 @@ public class RotationMethods
 		@Override
 		public MethodResult use(IComputerAccess computer, ILuaContext context, AbstractInterfaceEntity interfaceEntity, RotatingStargateEntity stargate, IArguments arguments) throws LuaException
 		{
-			return MethodResult.of(RotatingStargateFunctions.isCurrentSymbol(stargate, arguments.getInt(0)));
+			int symbol = arguments.getInt(0);
+			return MethodResult.of(RotatingStargateFunctions.isCurrentSymbol(stargate, symbol));
 		}
 	}
 	

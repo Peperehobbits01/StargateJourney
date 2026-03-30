@@ -4,11 +4,13 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.energy.EnergyStorage;
-import net.povstalec.sgjourney.common.init.DataComponentInit;
+import net.neoforged.neoforge.common.util.INBTSerializable;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 
-public abstract class SGJourneyEnergy extends EnergyStorage
+public abstract class SGJourneyEnergy implements IEnergyStorage, INBTSerializable<Tag>
 {
+	public static final char[] PREFIXES = {'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y', 'R', 'Q'};
+	
 	protected long energy;
     protected long capacity;
     protected long maxReceive;
@@ -16,8 +18,6 @@ public abstract class SGJourneyEnergy extends EnergyStorage
 	
 	public SGJourneyEnergy(long capacity, long maxReceive, long maxExtract)
 	{
-		super(getRegularEnergy(capacity), getRegularEnergy(maxReceive), getRegularEnergy(maxExtract));
-
 		this.energy = 0;
 		this.capacity = capacity;
 		this.maxReceive = maxReceive;
@@ -27,13 +27,14 @@ public abstract class SGJourneyEnergy extends EnergyStorage
     @Override
 	public int receiveEnergy(int maxReceive, boolean simulate)
 	{
-    	return (int) receiveLongEnergy((long) maxReceive, simulate);
+    	return regularEnergy(receiveLongEnergy(maxReceive, simulate));
 	}
     
     public long receiveLongEnergy(long maxReceive, boolean simulate)
     {
         if(!canReceive())
             return 0;
+		
         long energyReceived = Math.min(getTrueMaxEnergyStored() - energy, Math.min(maxReceive(), maxReceive));
         if(!simulate)
         	energy += energyReceived;
@@ -43,18 +44,23 @@ public abstract class SGJourneyEnergy extends EnergyStorage
         return energyReceived;
     }
 	
+	public long receiveZeroPointEnergy(long maxReceive, boolean simulate)
+	{
+		return receiveLongEnergy(maxReceive, simulate);
+	}
+	
 	@Override
-    public int extractEnergy(int maxExtract, boolean simulate)
-    {
-		return (int) extractLongEnergy((long) maxExtract, simulate);
-    }
+	public int extractEnergy(int maxExtract, boolean simulate)
+	{
+		return regularEnergy(extractLongEnergy(maxExtract, simulate));
+	}
 	
 	public long extractLongEnergy(long maxExtract, boolean simulate)
 	{
 		if(!canExtract())
             return 0;
 		
-		long energyExtracted = Math.min(energy, Math.min(this.maxExtract, maxExtract));
+		long energyExtracted = Math.min(energy, Math.min(maxExtract(), maxExtract));
         if(!simulate)
         	energy -= energyExtracted;
         
@@ -67,7 +73,7 @@ public abstract class SGJourneyEnergy extends EnergyStorage
 	@Override
     public int getEnergyStored()
     {
-        return getRegularEnergy(getTrueEnergyStored());
+        return regularEnergy(getTrueEnergyStored());
     }
 	
 	public long getTrueEnergyStored()
@@ -78,7 +84,7 @@ public abstract class SGJourneyEnergy extends EnergyStorage
     @Override
     public int getMaxEnergyStored()
     {
-        return getRegularEnergy(getTrueMaxEnergyStored());
+        return regularEnergy(getTrueMaxEnergyStored());
     }
     
     public long getTrueMaxEnergyStored()
@@ -139,14 +145,50 @@ public abstract class SGJourneyEnergy extends EnergyStorage
     	this.setEnergy(longTag.getAsLong());
     }
     
-    public static int getRegularEnergy(long energy)
+    public static int regularEnergy(long energy)
     {
-    	return energy > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) energy;
+    	return (int) Math.min(Integer.MAX_VALUE, energy);
     }
 	
+	public static String energyToString(long energy)
+	{
+		if(energy < 0)
+			return "NaN";
+		
+		if(energy < 1000)
+			return energy + " FE";
+		
+		double total = energy;
+		int prefix = -1;
+		for(; total >= 1000 && prefix < PREFIXES.length; prefix++)
+		{
+			total /= 1000;
+		}
+		
+		total *= 100;
+		total = Math.floor(total);
+		total /= 100;
+		
+		return total + " " + PREFIXES[prefix] + "FE";
+	}
+	
+	public static String energyToString(long energy, long capacity)
+	{
+		return energyToString(energy) + "/" + energyToString(capacity);
+	}
+	
+	public static long energyToTarget(long energyTarget, long energyStored, long maxExtract)
+	{
+		long needed = energyTarget - energyStored;
+		
+		if(needed < 0)
+			return 0;
+		
+		return Math.min(needed, maxExtract);
+	}
 	
 	
-	public static class Item extends SGJourneyEnergy
+	public static abstract class Item extends SGJourneyEnergy
 	{
 		protected ItemStack stack;
 		
@@ -155,13 +197,9 @@ public abstract class SGJourneyEnergy extends EnergyStorage
 			super(capacity, maxReceive, maxExtract);
 			
 			this.stack = stack;
-			this.energy = stack.getOrDefault(DataComponentInit.ENERGY, 0L);
+			this.energy = loadEnergy(stack);
 		}
 		
-		@Override
-		public void onEnergyChanged(long difference, boolean simulate)
-		{
-			stack.set(DataComponentInit.ENERGY, this.energy);
-		}
+		public abstract long loadEnergy(ItemStack stack);
 	}
 }

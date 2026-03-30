@@ -5,6 +5,7 @@ import javax.annotation.Nullable;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
@@ -21,7 +22,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.povstalec.sgjourney.common.block_entities.EnergyBlockEntity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.povstalec.sgjourney.common.block_entities.tech.EnergyBlockEntity;
 import net.povstalec.sgjourney.common.block_entities.StructureGenEntity;
 import net.povstalec.sgjourney.common.block_entities.dhd.AbstractDHDEntity;
 import net.povstalec.sgjourney.common.block_entities.dhd.ClassicDHDEntity;
@@ -29,9 +31,8 @@ import net.povstalec.sgjourney.common.block_entities.dhd.CrystalDHDEntity;
 import net.povstalec.sgjourney.common.init.BlockEntityInit;
 import net.povstalec.sgjourney.common.init.BlockInit;
 import net.povstalec.sgjourney.common.init.ItemInit;
-import net.povstalec.sgjourney.common.menu.MilkyWayDHDMenu;
+import net.povstalec.sgjourney.common.menu.ClassicDHDMenu;
 import net.povstalec.sgjourney.common.misc.NetworkUtils;
-import net.povstalec.sgjourney.common.misc.InventoryHelper;
 import net.povstalec.sgjourney.common.misc.InventoryUtil;
 
 public class ClassicDHDBlock extends CrystalDHDBlock
@@ -55,7 +56,7 @@ public class ClassicDHDBlock extends CrystalDHDBlock
 	}
 
 	@Override
-	protected void use(Level level, BlockPos pos, Player player)
+	protected void use(Level level, BlockPos pos, Player player, BlockHitResult hitResult)
 	{
 		if(level.isClientSide())
 			return;
@@ -66,7 +67,7 @@ public class ClassicDHDBlock extends CrystalDHDBlock
 		{
 			dhd.setStargate();
 			
-			if(player.isShiftKeyDown())
+			if(hitResult.getDirection() != Direction.UP || player.isShiftKeyDown())
 				this.openCrystalMenu(player, dhd);
 			else
 			{
@@ -81,7 +82,7 @@ public class ClassicDHDBlock extends CrystalDHDBlock
 					@Override
 					public AbstractContainerMenu createMenu(int windowId, Inventory playerInventory, Player playerEntity)
 					{
-						return new MilkyWayDHDMenu(windowId, playerInventory, dhd);
+						return new ClassicDHDMenu(windowId, playerInventory, dhd);
 					}
 				};
 				NetworkUtils.openMenu((ServerPlayer) player, containerProvider, dhd.getBlockPos());
@@ -147,8 +148,8 @@ public class ClassicDHDBlock extends CrystalDHDBlock
 	{
 		ListTag nbtTagList = new ListTag();
 		
-		nbtTagList.add(InventoryHelper.addItem(0, InventoryUtil.itemName(ItemInit.NAQUADAH_GENERATOR_CORE.get()), 1, null));
-		nbtTagList.add(InventoryHelper.addItem(1, InventoryUtil.itemName(ItemInit.NAQUADAH_FUEL_ROD.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(0, InventoryUtil.itemName(ItemInit.NAQUADAH_GENERATOR_CORE.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(1, InventoryUtil.itemName(ItemInit.NAQUADAH_FUEL_ROD.get()), 1, null));
 		
 		return nbtTagList;
 	}
@@ -157,12 +158,12 @@ public class ClassicDHDBlock extends CrystalDHDBlock
 	{
 		ListTag nbtTagList = new ListTag();
 		
-		nbtTagList.add(InventoryHelper.addItem(0, InventoryUtil.itemName(ItemInit.LARGE_CONTROL_CRYSTAL.get()), 1, null));
-		nbtTagList.add(InventoryHelper.addItem(1, InventoryUtil.itemName(ItemInit.ENERGY_CRYSTAL.get()), 1, null));
-		nbtTagList.add(InventoryHelper.addItem(2, InventoryUtil.itemName(ItemInit.COMMUNICATION_CRYSTAL.get()), 1, null));
-		nbtTagList.add(InventoryHelper.addItem(3, InventoryUtil.itemName(ItemInit.ENERGY_CRYSTAL.get()), 1, null));
-		nbtTagList.add(InventoryHelper.addItem(5, InventoryUtil.itemName(ItemInit.ENERGY_CRYSTAL.get()), 1, null));
-		nbtTagList.add(InventoryHelper.addItem(7, InventoryUtil.itemName(ItemInit.TRANSFER_CRYSTAL.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(0, InventoryUtil.itemName(ItemInit.LARGE_CONTROL_CRYSTAL.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(1, InventoryUtil.itemName(ItemInit.ENERGY_CRYSTAL.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(2, InventoryUtil.itemName(ItemInit.COMMUNICATION_CRYSTAL.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(3, InventoryUtil.itemName(ItemInit.ENERGY_CRYSTAL.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(5, InventoryUtil.itemName(ItemInit.ENERGY_CRYSTAL.get()), 1, null));
+		nbtTagList.add(InventoryUtil.addItem(7, InventoryUtil.itemName(ItemInit.TRANSFER_CRYSTAL.get()), 1, null));
 		
 		return nbtTagList;
 	}

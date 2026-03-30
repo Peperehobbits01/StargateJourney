@@ -43,10 +43,12 @@ import net.povstalec.sgjourney.common.blocks.stargate.shielding.AbstractShieldin
 import net.povstalec.sgjourney.common.blockstates.Orientation;
 import net.povstalec.sgjourney.common.blockstates.ShieldingState;
 import net.povstalec.sgjourney.common.blockstates.StargatePart;
+import net.povstalec.sgjourney.common.capabilities.SGJourneyEnergy;
 import net.povstalec.sgjourney.common.config.CommonStargateConfig;
 import net.povstalec.sgjourney.common.init.DataComponentInit;
 import net.povstalec.sgjourney.common.init.ItemInit;
 import net.povstalec.sgjourney.common.items.StargateVariantItem;
+import net.povstalec.sgjourney.common.misc.InventoryUtil;
 import net.povstalec.sgjourney.common.sgjourney.Address;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo;
 import net.povstalec.sgjourney.common.sgjourney.StargateVariant;
@@ -54,7 +56,7 @@ import net.povstalec.sgjourney.common.sgjourney.StargateVariant;
 public abstract class AbstractStargateBaseBlock extends AbstractStargateBlock implements EntityBlock
 {
 	public static final String EMPTY = StargateJourney.EMPTY;
-	public static final String LOCAL_POINT_OF_ORIGIN = "local_point_of_origin";
+	public static final String LOCAL_POINT_OF_ORIGIN = AbstractStargateEntity.LOCAL_POINT_OF_ORIGIN;
 	
 	public AbstractStargateBaseBlock(Properties properties, double width, double horizontalOffset)
 	{
@@ -265,10 +267,10 @@ public abstract class AbstractStargateBaseBlock extends AbstractStargateBlock im
     {
     	long energy = 0;
         String id = "";
-		boolean hasData = stack.has(DataComponents.BLOCK_ENTITY_DATA);
-		CompoundTag blockEntityTag = stack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY).getUnsafe();
-    	
-        if(hasData)
+		
+		CompoundTag blockEntityTag = InventoryUtil.getBlockEntityTag(stack);
+		
+		if(blockEntityTag != null)
         {
             if(blockEntityTag.contains(AbstractStargateEntity.VARIANT))
             {
@@ -282,16 +284,15 @@ public abstract class AbstractStargateBaseBlock extends AbstractStargateBlock im
             	energy = blockEntityTag.getLong(AbstractStargateEntity.ENERGY);
         }
         
-        tooltipComponents.add(Component.translatable("tooltip.sgjourney.energy").append(Component.literal(": " + energy + " FE")).withStyle(ChatFormatting.DARK_RED));
+        tooltipComponents.add(Component.translatable("tooltip.sgjourney.energy").append(Component.literal(": " + SGJourneyEnergy.energyToString(energy))).withStyle(ChatFormatting.DARK_RED));
 		
-        
-        if(hasData)
+		if(blockEntityTag != null)
         {
         	if((blockEntityTag.contains(AbstractStargateEntity.DISPLAY_ID) && blockEntityTag.getBoolean(AbstractStargateEntity.DISPLAY_ID)) || CommonStargateConfig.always_display_stargate_id.get())
         	{
         		if(blockEntityTag.contains(AbstractStargateEntity.ID_9_CHEVRON_ADDRESS))
         		{
-        			id = new Address(blockEntityTag.getIntArray(AbstractStargateEntity.ID_9_CHEVRON_ADDRESS)).toString();
+					id = Address.addressIntArrayToString(blockEntityTag.getIntArray(AbstractStargateEntity.ID_9_CHEVRON_ADDRESS));
                 	tooltipComponents.add(Component.translatable("tooltip.sgjourney.9_chevron_address").append(Component.literal(": " + id)).withStyle(ChatFormatting.AQUA));
         		}
             	
@@ -302,27 +303,17 @@ public abstract class AbstractStargateBaseBlock extends AbstractStargateBlock im
         	
         	if((blockEntityTag.contains(LOCAL_POINT_OF_ORIGIN)))
             	tooltipComponents.add(Component.translatable("tooltip.sgjourney.local_point_of_origin").withStyle(ChatFormatting.GREEN));
+			
+			if(blockEntityTag.contains(AbstractStargateEntity.GENERATION_STEP, CompoundTag.TAG_BYTE) && StructureGenEntity.Step.SETUP == StructureGenEntity.Step.fromByte(blockEntityTag.getByte(AbstractStargateEntity.GENERATION_STEP)))
+				tooltipComponents.add(Component.translatable("tooltip.sgjourney.generates_inside_structure").withStyle(ChatFormatting.YELLOW));
+			
+			if(blockEntityTag.contains(AbstractStargateEntity.PRIMARY, CompoundTag.TAG_BYTE) && blockEntityTag.getBoolean(AbstractStargateEntity.PRIMARY))
+				tooltipComponents.add(Component.translatable("tooltip.sgjourney.is_primary").withStyle(ChatFormatting.DARK_GREEN));
         }
-        
-        if(hasData && blockEntityTag.contains(AbstractStargateEntity.GENERATION_STEP, CompoundTag.TAG_BYTE) && StructureGenEntity.Step.SETUP == StructureGenEntity.Step.fromByte(blockEntityTag.getByte(AbstractStargateEntity.GENERATION_STEP)))
-            tooltipComponents.add(Component.translatable("tooltip.sgjourney.generates_inside_structure").withStyle(ChatFormatting.YELLOW));
-		
-		if(blockEntityTag.contains(AbstractStargateEntity.PRIMARY, CompoundTag.TAG_BYTE) && blockEntityTag.getBoolean(AbstractStargateEntity.PRIMARY))
-			tooltipComponents.add(Component.translatable("tooltip.sgjourney.is_primary").withStyle(ChatFormatting.DARK_GREEN));
         
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
     }
 	
-	public static ItemStack excludeFromNetwork(ItemStack stack, BlockEntityType<?> blockEntityType)
-	{
-		CompoundTag compoundtag = new CompoundTag();
-		compoundtag.putByte(AbstractStargateEntity.GENERATION_STEP, StructureGenEntity.Step.SETUP.byteValue());
-		BlockEntity.addEntityType(compoundtag, blockEntityType);
-		
-		stack.set(DataComponents.BLOCK_ENTITY_DATA, CustomData.of(compoundtag));
-		
-		return stack;
-	}
 	
 	public static ItemStack localPointOfOrigin(ItemStack stack, BlockEntityType<?> blockEntityType)
 	{

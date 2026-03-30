@@ -10,6 +10,7 @@ import net.povstalec.sgjourney.common.config.CommonStargateConfig;
 import net.povstalec.sgjourney.common.init.BlockEntityInit;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo.ChevronLockSpeed;
+import net.povstalec.sgjourney.common.sgjourney.stargate.TollanStargate;
 
 public class TollanStargateEntity extends AbstractStargateEntity
 {
@@ -26,15 +27,21 @@ public class TollanStargateEntity extends AbstractStargateEntity
 	}
 
 	@Override
+	protected int getMaxObstructiveBlocks()
+	{
+		return CommonStargateConfig.max_obstructive_blocks_tollan.get();
+	}
+
+	@Override
 	public void playRotationSound() {}
 
 	@Override
 	public void stopRotationSound() {}
 
 	@Override
-	public ChevronLockSpeed getChevronLockSpeed()
+	public ChevronLockSpeed getChevronLockSpeed(boolean doKawoosh)
 	{
-		return CommonStargateConfig.tollan_chevron_lock_speed.get();
+		return doKawoosh ? TollanStargate.CHEVRON_LOCK_SPEED : ChevronLockSpeed.FAST;
 	}
 
 	@Override

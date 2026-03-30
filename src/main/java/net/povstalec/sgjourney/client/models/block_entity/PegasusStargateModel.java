@@ -49,7 +49,7 @@ public class PegasusStargateModel extends GenericStargateModel<PegasusStargateEn
 	{
 		if(!stargate.isConnected() && stargate.symbolBuffer < stargate.addressBuffer.getLength())
 	    {
-			for(int i = 0; i < stargate.getAddress().getLength(); i++)
+			for(int i = 0; i < stargate.getAddress().regularSymbolCount(); i++)
 	    	{
 	    		// This makes sure the Symbol doesn't render over other existing symbols
 	    		if(stargate.getChevronPosition(i + 1) == this.currentSymbol)
@@ -61,10 +61,21 @@ public class PegasusStargateModel extends GenericStargateModel<PegasusStargateEn
 		
 	}
 	
+	protected void renderIdleSymbols(PegasusStargateEntity stargate, PegasusStargateVariant stargateVariant, PoseStack stack, VertexConsumer consumer, MultiBufferSource source,
+									 Symbols symbols, ColorUtil.RGBA symbolColor, int numberOfSymbols)
+	{
+		// Idle Symbols
+		for(int symbol = 1; symbol < numberOfSymbols && symbol < this.numberOfSymbols; symbol++)
+		{
+			renderSymbol(stargate, stargateVariant, stack, consumer, source, MAX_LIGHT, symbol,
+					symbols.getTextureOffset(symbol), symbols.getSize(), 0, symbolColor);
+		}
+	}
+	
 	@Override
 	protected void renderSymbols(PegasusStargateEntity stargate, PegasusStargateVariant stargateVariant, PoseStack stack, VertexConsumer consumer, MultiBufferSource source, int combinedLight, float rotation)
 	{
-		int currentSymbol = stargate.addressBuffer.getSymbol(stargate.symbolBuffer);
+		int currentSymbol = stargate.addressBuffer.symbolAt(stargate.symbolBuffer);
 		
 		PointOfOrigin pointOfOrigin = getPointOfOrigin(stargate, stargateVariant);
 		
@@ -104,39 +115,15 @@ public class PegasusStargateModel extends GenericStargateModel<PegasusStargateEn
 			if(currentSymbol > 0)
 				renderSpinningSymbol(stargate, stargateVariant, stack, consumer, source, combinedLight, symbols.getTextureOffset(currentSymbol), symbols.getSize(), rotation);
 			
-			// Point of Origin when Stargate is connected
-			//if(stargate.isConnected())
-			//	renderSymbol(stargate, stargateVariant, stack, consumer, source, MAX_LIGHT, 0, 0, 0, getSymbolColor(stargate, stargateVariant, true));
-			
 			// Locked Symbols
-			for(int i = 0; i < stargate.getAddress().getLength(); i++)
+			for(int i = 0; i < stargate.getAddress().regularSymbolCount(); i++)
 			{
 				int symbolNumber = stargate.getChevronPosition(i + 1);
 				renderSymbol(stargate, stargateVariant, stack, consumer, source, MAX_LIGHT, symbolNumber, 
-						symbols.getTextureOffset(stargate.getAddress().toArray()[i]), symbols.getSize(), 0, getSymbolColor(stargate, stargateVariant, true));
+						symbols.getTextureOffset(stargate.getAddress().getArray()[i]), symbols.getSize(), 0, getSymbolColor(stargate, stargateVariant, true));
 			}
 		}
 		else
-		{
-			ColorUtil.RGBA symbolColor = getSymbolColor(stargate, stargateVariant, false);
-			int symbolNumber = this.numberOfSymbols;
-			
-			if(stargate.isConnected())
-			{
-				symbolColor = getSymbolColor(stargate, stargateVariant, true);
-				symbolNumber = stargate.currentSymbol < this.numberOfSymbols ? stargate.currentSymbol : symbolNumber;
-				//if(stargate.getKawooshTickCount() > 0)
-				//	renderSymbol(stargate, stargateVariant, stack, consumer, source, MAX_LIGHT, 0, 0, 0, symbolColor);
-			}
-			
-			// Idle Symbols
-			int startFrom = stargate.isConnected() ? 0 : 1;
-			for(int i = startFrom; i < symbolNumber; i++)
-			{
-				int renderedSymbol = (stargate.isConnected() ? i + 1 : i) % this.numberOfSymbols;
-				renderSymbol(stargate, stargateVariant, stack, consumer, source, MAX_LIGHT, renderedSymbol, 
-						symbols.getTextureOffset(renderedSymbol), symbols.getSize(), 0, symbolColor);
-			}
-		}
+			renderIdleSymbols(stargate, stargateVariant, stack, consumer, source, symbols, getSymbolColor(stargate, stargateVariant, stargate.isConnected()), stargate.isConnected() ? stargate.currentSymbol : 36);
 	}
 }

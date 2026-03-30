@@ -131,13 +131,13 @@ public class Galaxy
 			});
 		}
 		
-		public boolean containsSolarSystem(Address.Immutable address)
+		public boolean containsSolarSystem(Address address)
 		{
 			return this.solarSystems.containsKey(address);
 		}
 		
 		@Nullable
-		public SolarSystem.Serializable getSolarSystem(Address.Immutable address)
+		public SolarSystem.Serializable getSolarSystem(Address address)
 		{
 			return this.solarSystems.get(address);
 		}
@@ -148,7 +148,7 @@ public class Galaxy
 			//System.out.println("Added " + solarSystem.getName() + " to " + this.getKey().location().toString() + " as " + address.toString());
 		}
 		
-		public void removeSolarSystem(Address.Immutable address)
+		public void removeSolarSystem(Address address)
 		{
 			if(containsSolarSystem(address))
 				this.solarSystems.remove(address);
@@ -191,6 +191,18 @@ public class Galaxy
 			return this.pointsOfOrigin.get(randomValue);
 		}
 		
+		@Override
+		public boolean equals(Object other)
+		{
+			if(other == this)
+				return true;
+			
+			if(other instanceof Galaxy.Serializable galaxy)
+				return this.galaxyKey.equals(galaxy.galaxyKey);
+			
+			return false;
+		}
+		
 		
 		
 		public CompoundTag serialize()
@@ -220,7 +232,7 @@ public class Galaxy
 			return galaxyTag;
 		}
 		
-		public static Galaxy.Serializable deserialize(MinecraftServer server, HashMap<Address.Immutable, SolarSystem.Serializable> solarSystems,
+		public static Galaxy.Serializable deserialize(MinecraftServer server, HashMap<Address, SolarSystem.Serializable> solarSystems,
 				Registry<Galaxy> galaxyRegistry, ResourceKey<Galaxy> galaxyKey, CompoundTag galaxyTag)
 		{
 			Galaxy galaxy = galaxyRegistry.get(galaxyKey);
@@ -232,8 +244,8 @@ public class Galaxy
 			//System.out.println("Galaxy: " + galaxyKey.location().toString());
 			solarSystemsTag.getAllKeys().forEach(addressString ->
 			{
-				Address.Immutable extragalacticAddress = new Address(solarSystemsTag.getIntArray(addressString)).immutable(); // 8-chevron address
-				Address.Immutable address = new Address(addressString).immutable(); // 7-chevron address
+				Address.Immutable extragalacticAddress = new Address.Immutable(solarSystemsTag.getIntArray(addressString)); // 8-chevron address
+				Address.Immutable address = new Address.Immutable(addressString); // 7-chevron address
 				
 				if(solarSystems.containsKey(extragalacticAddress))
 				{

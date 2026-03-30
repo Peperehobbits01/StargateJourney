@@ -34,8 +34,6 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -47,6 +45,7 @@ import net.povstalec.sgjourney.common.block_entities.StructureGenEntity;
 import net.povstalec.sgjourney.common.blockstates.Orientation;
 import net.povstalec.sgjourney.common.config.ClientStargateConfig;
 import net.povstalec.sgjourney.common.init.BlockInit;
+import net.povstalec.sgjourney.common.misc.InventoryUtil;
 import net.povstalec.sgjourney.common.sgjourney.Address;
 import net.povstalec.sgjourney.common.sgjourney.Symbols;
 
@@ -112,13 +111,13 @@ public abstract class CartoucheBlock extends HorizontalDirectionalBlock implemen
 				pos = pos.relative(Orientation.getMultiDirection(direction, Direction.DOWN, orientation));
 
 			BlockEntity blockEntity = level.getBlockEntity(pos);
-
+			
 			if(blockEntity instanceof CartoucheEntity cartouche)
 			{
 				Address address = cartouche.getAddress();
 				
-				if(address.isFromDimension())
-					player.sendSystemMessage(Component.translatable("info.sgjourney.dimension").append(Component.literal(": ")).append(address.getDimension().location().toString()).withStyle(ChatFormatting.GREEN));
+				if(address instanceof Address.Dimension dimensionAddress)
+					player.sendSystemMessage(Component.translatable("info.sgjourney.dimension").append(Component.literal(": ")).append(dimensionAddress.getDimension().location().toString()).withStyle(ChatFormatting.GREEN));
 				player.sendSystemMessage(Component.translatable("info.sgjourney.address").append(Component.literal(": ")).withStyle(ChatFormatting.YELLOW).append(address.toComponent(true)));
 				
 				if(cartouche.getSymbols() != null)
@@ -171,22 +170,6 @@ public abstract class CartoucheBlock extends HorizontalDirectionalBlock implemen
 
 		return super.playerWillDestroy(level, pos, state, player);
 	}
-	
-	@Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type)
-	{
-        if (!level.isClientSide())
-        {
-            return (localLevel, pos, blockState, entity) -> {
-                if (entity instanceof CartoucheEntity cartouche) 
-                {
-                	cartouche.tick(localLevel, pos, blockState);
-                }
-            };
-        }
-        return null;
-    }
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag)
@@ -194,33 +177,31 @@ public abstract class CartoucheBlock extends HorizontalDirectionalBlock implemen
     	boolean hasAddress = false;
     	String dimension = "";
     	String symbols = "";
-    	String addressTable = "";
-
-		if(stack.has(DataComponents.BLOCK_ENTITY_DATA))
-		{
-			CompoundTag tag = stack.get(DataComponents.BLOCK_ENTITY_DATA).getUnsafe();
-    		
-    		if(tag.contains(CartoucheEntity.ADDRESS))
+		CompoundTag blockEntityTag = InventoryUtil.getBlockEntityTag(stack);
+		
+    	if(blockEntityTag != null)
+    	{
+    		if(blockEntityTag.contains(CartoucheEntity.ADDRESS))
     		{
     			hasAddress = true;
     			
-    			int[] addressArray = tag.getIntArray(CartoucheEntity.ADDRESS);
+    			int[] addressArray = blockEntityTag.getIntArray(CartoucheEntity.ADDRESS);
     			
-    			Address address = new Address(addressArray);
+    			Address address = new Address.Immutable(addressArray);
     			tooltipComponents.add(Component.translatable("tooltip.sgjourney.address").append(Component.literal(": ").append(address.toComponent(false))).withStyle(ChatFormatting.YELLOW));
     		}
     		
-    		if(tag.contains(CartoucheEntity.DIMENSION))
-    			dimension = tag.getString(CartoucheEntity.DIMENSION);
+    		if(blockEntityTag.contains(CartoucheEntity.DIMENSION))
+    			dimension = blockEntityTag.getString(CartoucheEntity.DIMENSION);
     		
-    		if(tag.contains(CartoucheEntity.SYMBOLS))
+    		if(blockEntityTag.contains(CartoucheEntity.SYMBOLS))
     		{
         		Minecraft minecraft = Minecraft.getInstance();
         		ClientPacketListener clientPacketListener = minecraft.getConnection();
         		RegistryAccess registries = clientPacketListener.registryAccess();
         		Registry<Symbols> symbolsRegistry = registries.registryOrThrow(Symbols.REGISTRY_KEY);
         		
-    			ResourceLocation location = ResourceLocation.parse(tag.getString(CartoucheEntity.SYMBOLS));
+    			ResourceLocation location = ResourceLocation.parse(blockEntityTag.getString(CartoucheEntity.SYMBOLS));
     			if(location.toString().equals("sgjourney:empty"))
     				symbols = "Empty";
     			else if(symbolsRegistry.containsKey(location))
@@ -229,8 +210,8 @@ public abstract class CartoucheBlock extends HorizontalDirectionalBlock implemen
     				symbols = "Error";
     		}
         	
-        	if(tag.contains(CartoucheEntity.ADDRESS_TABLE))
-        		tooltipComponents.add(Component.translatable("tooltip.sgjourney.address_table").append(Component.literal(": " + tag.getString(CartoucheEntity.ADDRESS_TABLE))).withStyle(ChatFormatting.YELLOW));
+        	if(blockEntityTag.contains(CartoucheEntity.ADDRESS_TABLE))
+        		tooltipComponents.add(Component.translatable("tooltip.sgjourney.address_table").append(Component.literal(": " + blockEntityTag.getString(CartoucheEntity.ADDRESS_TABLE))).withStyle(ChatFormatting.YELLOW));
     	}
     	
     	if(!hasAddress)

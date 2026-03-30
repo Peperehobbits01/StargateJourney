@@ -9,9 +9,12 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractInterfaceEntity;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.povstalec.sgjourney.common.block_entities.tech_interface.AbstractInterfaceEntity;
+import net.povstalec.sgjourney.common.blockstates.InterfaceMode;
 import net.povstalec.sgjourney.common.init.BlockInit;
 import net.povstalec.sgjourney.common.init.MenuInit;
+import net.povstalec.sgjourney.common.packets.ServerboundInterfaceUpdatePacket;
 
 public class InterfaceMenu extends AbstractContainerMenu
 {
@@ -40,6 +43,41 @@ public class InterfaceMenu extends AbstractContainerMenu
     	return this.interfaceEntity.getEnergyCapacity();
     }
 	
+	public InterfaceMode getMode()
+	{
+		return this.interfaceEntity.getMode();
+	}
+	
+	public void setEnergyTargetAndMode(long energyTarget, InterfaceMode mode)
+	{
+		PacketDistributor.sendToServer(new ServerboundInterfaceUpdatePacket(this.interfaceEntity.getBlockPos(), energyTarget, mode));
+	}
+	
+	public long getEnergyTarget()
+	{
+		return this.interfaceEntity.getEnergyTarget();
+	}
+	
+	public long getEnergyBlockEnergy()
+	{
+		return this.interfaceEntity.getEnergyBlockEnergy();
+	}
+	
+	public int getStargateOpenTime()
+	{
+		return this.interfaceEntity.getStargateOpenTime();
+	}
+	
+	public int getStargateTimeSinceLastTraveler()
+	{
+		return this.interfaceEntity.getStargateTimeSinceLastTraveler();
+	}
+	
+	public AbstractInterfaceEntity.InterfaceType getInterfaceType()
+	{
+		return this.interfaceEntity.getInterfaceType();
+	}
+	
 	@Override
 	public boolean stillValid(Player player)
 	{
@@ -52,7 +90,7 @@ public class InterfaceMenu extends AbstractContainerMenu
 	@Override
 	public ItemStack quickMoveStack(Player player, int index)
 	{
-		return null;
+		return ItemStack.EMPTY;
 	}
 	
 }

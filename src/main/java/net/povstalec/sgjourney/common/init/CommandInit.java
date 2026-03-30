@@ -26,6 +26,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -34,22 +35,20 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.world.phys.Vec3;
 import net.povstalec.sgjourney.StargateJourney;
 import net.povstalec.sgjourney.common.capabilities.AncientGene;
 import net.povstalec.sgjourney.common.block_entities.ProtectedBlockEntity;
 import net.povstalec.sgjourney.common.blocks.ProtectedBlock;
 import net.povstalec.sgjourney.common.command.AddressArgumentType;
 import net.povstalec.sgjourney.common.command.AddressArgumentInfo;
-import net.povstalec.sgjourney.common.data.BlockEntityList;
-import net.povstalec.sgjourney.common.data.StargateNetwork;
-import net.povstalec.sgjourney.common.data.StargateNetworkSettings;
-import net.povstalec.sgjourney.common.data.TransporterNetwork;
-import net.povstalec.sgjourney.common.data.Universe;
+import net.povstalec.sgjourney.common.data.*;
+import net.povstalec.sgjourney.common.misc.CoordinateHelper;
 import net.povstalec.sgjourney.common.sgjourney.Address;
 import net.povstalec.sgjourney.common.sgjourney.Galaxy;
 import net.povstalec.sgjourney.common.sgjourney.Galaxy.Serializable;
 import net.povstalec.sgjourney.common.sgjourney.SolarSystem;
-import net.povstalec.sgjourney.common.sgjourney.Transporter;
+import net.povstalec.sgjourney.common.sgjourney.transporter.Transporter;
 
 public class CommandInit
 {
@@ -335,17 +334,18 @@ public class CommandInit
 				solarSystem.getStargates().stream().forEach(stargate ->
 				{
 					ResourceKey<Level> stargateDimension = stargate.getDimension();
-					BlockPos stargatePos = stargate.getBlockPos();
+					Vec3 stargatePos = stargate.getPosition(context.getSource().getServer());
 					
-					if(stargateDimension.equals(dimension))
+					if(dimension.equals(stargateDimension) && stargatePos != null)
 					{
+						
 						Style style = Style.EMPTY;
 						style = style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("message.sgjourney.command.click_to_copy.address")));
 						style = style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, stargate.get9ChevronAddress().toString()));
 						
 						final Style formatStyle = style;
 						context.getSource().sendSuccess(() -> Component.literal(stargate.get9ChevronAddress().toString()).setStyle(formatStyle.applyFormat(ChatFormatting.AQUA))
-								.append(Component.literal(" X: " + stargatePos.getX() + " Y: " + stargatePos.getY() + " Z: " + stargatePos.getZ()).withStyle(ChatFormatting.BLUE)), false);
+								.append(Component.literal(" X: " + stargatePos.x() + " Y: " + stargatePos.y() + " Z: " + stargatePos.z()).withStyle(ChatFormatting.BLUE)), false);
 					}
 				});
 				context.getSource().sendSuccess(() -> Component.literal("-------------------------"), false);
@@ -495,15 +495,13 @@ public class CommandInit
 				.append(Component.literal(" " + dimension.location().toString()).withStyle(ChatFormatting.GOLD)), false);
 		context.getSource().sendSuccess(() -> Component.literal("-------------------------"), false);
 		
-		Optional<List<Transporter>> transportersOptional = TransporterNetwork.get(level).getTransportersFromDimension(dimension);
+		List<Transporter> transporters = TransporterNetwork.get(level).getTransportersFromDimension(dimension);
 		
-		if(transportersOptional.isPresent())
+		if(transporters != null)
 		{
-			List<Transporter> transporters = transportersOptional.get();
-			
-			for(int i = 0; i < transporters.size(); i++)
+			for(Transporter transporter : transporters)
 			{
-				BlockPos coords = transporters.get(i).getBlockPos();
+				BlockPos coords = transporter.getBlockPos();
 				context.getSource().sendSuccess(() -> Component.literal("X: " + coords.getX() + " Y: " + coords.getY() + " Z: " + coords.getZ()).withStyle(ChatFormatting.BLUE), false);
 			}
 		}
@@ -615,21 +613,24 @@ public class CommandInit
 	//Only used for console checks
 	private static int printStargateNetworkInfo(CommandContext<CommandSourceStack> context) throws CommandSyntaxException
 	{
-		Level level = context.getSource().getPlayer().level();
+		MinecraftServer server = context.getSource().getServer();
 
 		System.out.println("===============Universe===============");
-		Universe.get(level).printDimensions();
-		Universe.get(level).printSolarSystems();
-		Universe.get(level).printGalaxies();
+		Universe.get(server).printDimensions();
+		Universe.get(server).printSolarSystems();
+		Universe.get(server).printGalaxies();
 		
 		System.out.println("===============Stargate Network===============");
-		BlockEntityList.get(level).printStargates();
-		StargateNetwork.get(level).printConnections();
+		BlockEntityList.get(server).printStargates();
+		StargateNetwork.get(server).printConnections();
 
 		System.out.println("===============Transporter Network===============");
-		BlockEntityList.get(level).printTransporters();
-		TransporterNetwork.get(level).printDimensions();
-
+		BlockEntityList.get(server).printTransporters();
+		TransporterNetwork.get(server).printDimensions();
+		
+		System.out.println("===============Conduit Networks===============");
+		ConduitNetworks.get(server).printConduits();
+		
 		context.getSource().sendSuccess(() -> Component.literal("Printed info onto the console"), false);
 		
 		return Command.SINGLE_SUCCESS;

@@ -2,7 +2,7 @@ package net.povstalec.sgjourney.common.compatibility.computer_functions;
 
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.povstalec.sgjourney.common.block_entities.stargate.AbstractStargateEntity;
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractInterfaceEntity;
+import net.povstalec.sgjourney.common.block_entities.tech_interface.AbstractInterfaceEntity;
 import net.povstalec.sgjourney.common.sgjourney.Address;
 import net.povstalec.sgjourney.common.sgjourney.StargateInfo;
 
@@ -101,10 +101,10 @@ public class GenericStargateFunctions
 		return interfaceEntity.getInterfaceType().hasAdvancedCrystalMethods() && engageDirectly ? stargate.engageSymbol(desiredSymbol) : stargate.dhdEngageSymbol(desiredSymbol);
 	}
 	
-	public static Address.Immutable getDialedAddress(AbstractStargateEntity stargate)
+	public static Address.Mutable getDialedAddress(AbstractStargateEntity stargate)
 	{
 		// Will only display the dialed Address
-		return !stargate.isConnected() || (stargate.isConnected() && stargate.isDialingOut()) ? stargate.getAddress().immutable() : new Address().immutable();
+		return !stargate.isConnected() || stargate.isDialingOut() ? stargate.getAddress() : new Address.Mutable();
 	}
 	
 	public static void setChevronConfiguration(AbstractStargateEntity stargate, int[] configurationArray)
@@ -143,14 +143,14 @@ public class GenericStargateFunctions
 	//*********************************Advanced Crystal Interface*********************************
 	//============================================================================================
 	
-	public static Address.Immutable getConnectedAddress(AbstractStargateEntity stargate)
+	public static Address getConnectedAddress(AbstractStargateEntity stargate)
 	{
-		return stargate.getAddress().immutable();
+		return stargate.getAddress();
 	}
 	
 	public static Address.Immutable getLocalAddress(AbstractStargateEntity stargate)
 	{
-		return stargate.get9ChevronAddress().immutable();
+		return stargate.get9ChevronAddress();
 	}
 	
 	public static int getNetwork(AbstractStargateEntity stargate)

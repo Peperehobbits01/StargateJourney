@@ -35,6 +35,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -44,9 +45,12 @@ import net.povstalec.sgjourney.common.block_entities.stargate.AbstractStargateEn
 import net.povstalec.sgjourney.common.blocks.ProtectedBlock;
 import net.povstalec.sgjourney.common.blocks.stargate.AbstractStargateBlock;
 import net.povstalec.sgjourney.common.blockstates.StargatePart;
+import net.povstalec.sgjourney.common.capabilities.*;
 import net.povstalec.sgjourney.common.capabilities.AncientGene;
 import net.povstalec.sgjourney.common.capabilities.BloodstreamNaquadah;
+import net.povstalec.sgjourney.common.config.CommonCableConfig;
 import net.povstalec.sgjourney.common.config.CommonGeneticConfig;
+import net.povstalec.sgjourney.common.data.Factions;
 import net.povstalec.sgjourney.common.data.StargateNetwork;
 import net.povstalec.sgjourney.common.data.TransporterNetwork;
 import net.povstalec.sgjourney.common.entities.Human;
@@ -72,18 +76,17 @@ public class ForgeEvents
 	public static void onTick(ServerTickEvent.Pre event) //TODO Is Pre really what we need here?
 	{
 		MinecraftServer server = event.getServer();
-		if(server != null)
-			StargateNetwork.get(server).handleConnections();
+		
+		Factions.get(server).tickFactions(server.getTickCount());
+		
+		StargateNetwork.get(server).handleConnections();
+		TransporterNetwork.get(server).handleConnections();
 	}
 	
 	private static AbstractStargateEntity getStargateAtPos(Level level, BlockPos pos, BlockState blockstate)
 	{
 		if(blockstate.getBlock() instanceof AbstractStargateBlock stargateBlock)
-		{
-			AbstractStargateEntity stargate = stargateBlock.getStargate(level, pos, blockstate);
-			
-			return stargate;
-		}
+			return stargateBlock.getStargate(level, pos, blockstate);
 		
 		return null;
 	}
@@ -126,7 +129,7 @@ public class ForgeEvents
 			}
 
 			Set<AbstractStargateEntity> set = new HashSet<AbstractStargateEntity>(list);
-			set.stream().forEach(stargate -> stargate.receiveEnergy(100000, false));
+			set.stream().forEach(stargate -> stargate.receiveEnergy(CommonCableConfig.lightning_strike_energy.get(), false));
 		}
 	}
 	
@@ -340,12 +343,32 @@ public class ForgeEvents
 			}
 		}
 	}
+
+	@SubscribeEvent
+	public static void onDetonate(ExplosionEvent.Detonate event)
+	{
+		Level level = event.getLevel();
+		// Prevent Protected Block Entities from being destroyed by explosions
+		event.getAffectedBlocks().removeIf(pos ->
+		{
+			BlockState state = level.getBlockState(pos);
+			return state.getBlock() instanceof ProtectedBlock block && block.canExplode(level, pos, state, event.getExplosion());
+		});
+	}
 	
 	@SubscribeEvent
 	public static void onPlayerCloned(PlayerEvent.Clone event)
 	{
 		Player original = event.getOriginal();
 		Player clone = event.getEntity();
+		
+		GoauldHost goauldHost = original.getCapability(GoauldHost.GOAULD_HOST_CAPABILITY);
+		if(goauldHost != null)
+		{
+			GoauldHost newGoauldHost = clone.getCapability(GoauldHost.GOAULD_HOST_CAPABILITY);
+			if(newGoauldHost != null)
+				newGoauldHost.copyFrom(goauldHost);
+		}
 		
 		BloodstreamNaquadah bloodstreamNaquadah = original.getCapability(BloodstreamNaquadah.BLOODSTREAM_NAQUADAH_CAPABILITY);
 		if(bloodstreamNaquadah != null)

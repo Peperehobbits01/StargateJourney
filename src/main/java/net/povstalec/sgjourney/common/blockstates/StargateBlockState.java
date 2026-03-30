@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
@@ -21,6 +22,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.ItemAbility;
@@ -47,7 +49,8 @@ public class StargateBlockState extends BlockState
 	@Override
 	public float getDestroySpeed(BlockGetter reader, BlockPos pos)
 	{
-		if(this.getBlock() instanceof AbstractStargateBlock stargateBlock)
+		// Null checks here because ProjectMMO passes a null values in here https://github.com/Caltinor/Project-MMO-2.0/issues/706
+		if(reader != null && pos != null && this.getBlock() instanceof AbstractStargateBlock stargateBlock)
 		{
 			AbstractStargateEntity stargate = stargateBlock.getStargate(reader, pos, reader.getBlockState(pos));
 			if(stargate != null && !CommonStargateConfig.can_break_connected_stargate.get())
@@ -70,6 +73,18 @@ public class StargateBlockState extends BlockState
 		}
 		
 		return super.getDestroySpeed(reader, pos);
+	}
+	
+	protected float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos)
+	{
+		float speed = state.getDestroySpeed(level, pos);
+		if(speed == -1.0F)
+			return 0.0F;
+		else
+		{
+			int i = EventHooks.doPlayerHarvestCheck(player, state, level, pos) ? 30 : 100;
+			return player.getDigSpeed(state, pos) / speed / (float) i;
+		}
 	}
 	
 	@Override
@@ -96,8 +111,8 @@ public class StargateBlockState extends BlockState
 				}
 			}
 		}
-		
-		return super.getDestroyProgress(player, reader, pos);
+		// Adding this here because I now have trust issues with IForgeBlockState and whatever mixins can do to it
+		return getDestroyProgress(asState(), player, reader, pos);
 	}
 	
 	@Override
@@ -118,12 +133,17 @@ public class StargateBlockState extends BlockState
 					return coverState.get().getSoundType(level, pos, entity);
 			}
 		}
-		
-		return super.getSoundType(level, pos, entity);
+		// Adding this here because I now have trust issues with IForgeBlockState and whatever mixins can do to it
+		return this.self().getBlock().getSoundType(self(), level, pos, entity);
 		
 	}
 	
-	
+	// Adding this here because I now have trust issues with IForgeBlockState and whatever mixins can do to it
+	@Override
+	protected BlockState asState()
+	{
+		return this;
+	}
 	
 	private BlockState self()
 	{
@@ -453,5 +473,17 @@ public class StargateBlockState extends BlockState
 	public BubbleColumnDirection getBubbleColumnDirection()
 	{
 		return this.self().getBlock().getBubbleColumnDirection(this.self());
+	}
+	
+	@Override
+	public boolean isPathfindable(PathComputationType pathComputationType)
+	{
+		return switch (pathComputationType)
+		{
+			case LAND -> !this.self().isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+			case WATER -> this.self().getFluidState().is(FluidTags.WATER);
+			case AIR -> !this.self().isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+			default -> false;
+		};
 	}
 }

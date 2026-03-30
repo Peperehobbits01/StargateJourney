@@ -1,6 +1,6 @@
 package net.povstalec.sgjourney.common.compatibility.computer_functions;
 
-import net.povstalec.sgjourney.common.block_entities.tech.AbstractInterfaceEntity;
+import net.povstalec.sgjourney.common.block_entities.tech_interface.AbstractInterfaceEntity;
 import net.povstalec.sgjourney.common.sgjourney.Address;
 
 import java.util.Map;
@@ -36,6 +36,6 @@ public class InterfaceFunctions
 	
 	public static String addressToString(Map<Double, Double> addressTable)
 	{
-		return new Address(addressTable).toString();
+		return new Address.Immutable(addressTable).toString();
 	}
 }
